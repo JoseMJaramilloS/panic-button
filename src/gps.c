@@ -53,7 +53,7 @@ bool read_gps_coor(double *latitude, double *longitude){
 
     while(finding){
         if (read_raw_line(gps_data)) {
-            printf("%s", gps_data); // Imprime solo si se recibe una trama completa
+            // printf("%s", gps_data); // Imprime solo si se recibe una trama completa
             if (strncmp(gps_data, "$GNGGA", strlen("$GNGGA")) == 0){ //|| strncmp(gps_data, "$GNRMC", strlen("$GNRMC")) == 0){
                 finding = false;
                 // printf("%s", gps_data);

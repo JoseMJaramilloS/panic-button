@@ -39,9 +39,9 @@ void gpio_callback(uint gpio, uint32_t events) {
 
         if (!current_button_state) {  // Botón presionado (considerando pull-up)
             printf("Botón presionado!\n");
-            // if (read_gps_coor(&latitude, &longitude)){
-                latitude = 6.2152100;
-                longitude = -75.5833950;
+            if (read_gps_coor(&latitude, &longitude)){
+                // latitude = 6.2152100;
+                // longitude = -75.5833950;
                 printf("%f,%f\n", latitude, longitude);
 
                 uint8_t len = snprintf(NULL, 0, "1, %f, %f", latitude, longitude);
@@ -55,7 +55,7 @@ void gpio_callback(uint gpio, uint32_t events) {
                 hex_payload[i * 2] = '\0'; // Agrega el carácter nulo al final de la cadena
 
                 lora_send(0, 2, len, hex_payload); // se puede mejorar (?)
-            // }
+            }
         }
     }
 }
