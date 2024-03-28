@@ -24,6 +24,7 @@ void gps_init(uint8_t tx_pin, uint8_t rx_pin, uart_inst_t *uart_port, uint baud_
 * @brief Funcion que lee los datos del GPS
 */
 bool read_raw_line(uint8_t gps_data[MAX_GPS_DATA_SIZE]){
+    // static uint8_t i = 0; // si es static, es persistente
     
     while (uart_is_readable(uart_port_g)) {
         char c = uart_getc(uart_port_g);
@@ -52,7 +53,7 @@ bool read_gps_coor(double *latitude, double *longitude){
 
     while(finding){
         if (read_raw_line(gps_data)) {
-            // printf("%s", gps_data); // Imprime solo si se recibe una trama completa
+            printf("%s", gps_data); // Imprime solo si se recibe una trama completa
             if (strncmp(gps_data, "$GNGGA", strlen("$GNGGA")) == 0){ //|| strncmp(gps_data, "$GNRMC", strlen("$GNRMC")) == 0){
                 finding = false;
                 // printf("%s", gps_data);

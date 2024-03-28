@@ -6,38 +6,27 @@
 #include <string.h> // Para strcat
 #include <stdio.h>
 #include "gps.h"
+#include "lorawan.h"
 
 #define BAUD_RATE 9600
-#define DATA_LEN 8
-#define STOP_BITS 1
-#define PARITY UART_PARITY_NONE
 #define GPS_TX 8 // Se conecta al RX del GPS
 #define GPS_RX 9 // Se conecta al TX del GPS
-#define UART_ID_GPS uart1
+#define GPS_UART_ID uart1
 #define LORA_TX 12
 #define LORA_RX 13
-#define UART_ID_LORA uart0
+#define LORA_UART_ID uart0
 #define BUTTON_GPIO 10  // Define interrupt button
 #define DEBOUNCE_STABLE_MS 50
 
 volatile uint32_t last_change_time = 0;
 bool last_button_state = false;
-char cmd[16]; // Commands monitor serial
+char cmd[16]; // Send Commands monitor serial
 
-char cmdGPS[64];
-char sendCmd[] ="AT+DTRX=0,2,62,";
 
-uint8_t gps_data[MAX_GPS_DATA_SIZE];
+
+// uint8_t gps_data[MAX_GPS_DATA_SIZE]; borrar
 double latitude, longitude;
 bool button_pressed = true;
-
-// RX interrupt handler
-void on_uart_rx() {
-    while (uart_is_readable(UART_ID_LORA)) {
-        char received_char = uart_getc(UART_ID_LORA);
-        printf("%c", received_char);
-    }
-}
 
 // Button interrupt handler
 void gpio_callback(uint gpio, uint32_t events) {
@@ -50,34 +39,23 @@ void gpio_callback(uint gpio, uint32_t events) {
 
         if (!current_button_state) {  // Botón presionado (considerando pull-up)
             printf("Botón presionado!\n");
-            if (read_gps_coor(&latitude, &longitude)){
-                printf("%f,%f\n",latitude, longitude);
+            // if (read_gps_coor(&latitude, &longitude)){
+                latitude = 6.2152100;
+                longitude = -75.5833950;
+                printf("%f,%f\n", latitude, longitude);
 
-                uint8_t len = snprintf(NULL,0, "1, %f, %f", latitude, longitude);
+                uint8_t len = snprintf(NULL, 0, "1, %f, %f", latitude, longitude);
                 char message[len];
                 sprintf(message, "%d, %f, %f", button_pressed, latitude, longitude);
-                
-                printf("sending unconfirmed message %s\n", message);
-
-                char hex_payload[100];
                 int i;
-                for (i = 0; message[i] != '\0'; i++) {
+                char hex_payload[100];
+                for (i = 0; message[i] != '\0'; i++){
                     sprintf(&hex_payload[i * 2], "%02x", message[i]);
                 }
                 hex_payload[i * 2] = '\0'; // Agrega el carácter nulo al final de la cadena
-                // printf("%s\n", hex_payload);
-                // sprintf(str, "%x", message);
-                // printf("%s\n", str);
 
-                strcpy(cmdGPS, sendCmd); // Copia la primera cadena a resultado
-                strcat(cmdGPS, hex_payload); // Concatena la segunda cadena a resultado
-                strcat(cmdGPS,"\n"); // Concatena la segunda cadena a resultado
-                printf("%s\n", cmdGPS); // Imprime el resultado
-                uart_puts(UART_ID_LORA, cmdGPS);
-                
-            }
-            // uart_puts(UART_ID_LORA, "AT+DTRX=0,2,62,412C20362E3231353231302C202D37352E353833333935\n");
-
+                lora_send(0, 2, len, hex_payload); // se puede mejorar (?)
+            // }
         }
     }
 }
@@ -85,19 +63,7 @@ void gpio_callback(uint gpio, uint32_t events) {
 int main() {
     stdio_init_all();
 
-    // Initialize UART pin
-    uart_init(UART_ID_LORA, BAUD_RATE);
-    gpio_set_function(LORA_TX, GPIO_FUNC_UART);
-    gpio_set_function(LORA_RX, GPIO_FUNC_UART);
-    uart_set_hw_flow(UART_ID_LORA, false, false);
-    uart_set_format(UART_ID_LORA, DATA_LEN, STOP_BITS, PARITY);
-
-    // And set up and enable the interrupt handlers
-    irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
-    irq_set_enabled(UART0_IRQ, true);
-
-    // Now enable the UART to send interrupts - RX only
-    uart_set_irq_enables(UART_ID_LORA, false, false); //-----------------------
+    lorawan_init(LORA_TX,LORA_RX,LORA_UART_ID, BAUD_RATE);
 
     // Initialize GPIO for button with pull-up
     gpio_init(BUTTON_GPIO);
@@ -108,7 +74,7 @@ int main() {
     gpio_set_irq_enabled_with_callback(BUTTON_GPIO, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
     // GPS Initialization
-    gps_init(GPS_TX, GPS_RX, UART_ID_GPS, 9600);
+    gps_init(GPS_TX, GPS_RX, GPS_UART_ID, BAUD_RATE);
     sleep_ms(3000);
 
     while (1) {
