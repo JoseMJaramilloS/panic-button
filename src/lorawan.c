@@ -30,31 +30,17 @@ void lorawan_init(uint8_t tx_pin, uint8_t rx_pin, uart_inst_t *uart_port, uint b
 
 bool lora_send(uint8_t conf, uint8_t trials, uint8_t length, char *payload){
     char sendCmd[64];
-    char loraCmd[] ="AT+DTRX="; //"AT+DTRX=0,2,62,"
-    
-    char strConf[2];
-    char strTrials[3];
-    char strLength[3];
-    sprintf(strConf, "%u", conf); // Convertimos el uint8_t a string
-    sprintf(strTrials, "%u", trials);
-    sprintf(strLength, "%u", length);
+    // Construye el comando 
+    int written = snprintf(sendCmd, sizeof(sendCmd), "AT+DTRX=%u,%u,%u,%s\n", conf, trials, length, payload);
+    if (written < 0 || written >= sizeof(sendCmd)) {
+        printf("Error: sending buffer exceeded or error formating .\n");
+        return false; 
+    }
 
     printf("sending unconfirmed message %s\n", payload);
-
-    strcpy(sendCmd, loraCmd); // Copia loraCmd a senCmd
-    strcat(sendCmd, strConf); // Concatena la segunda cadena a sendCmd
-    strcat(sendCmd, ",");
-    strcat(sendCmd, strTrials);
-    strcat(sendCmd, ",");
-    strcat(sendCmd, strLength);
-    strcat(sendCmd, ",");
-    strcat(sendCmd, payload); 
-    strcat(sendCmd, "\n"); // Concatena LF
     printf("%s\n", sendCmd); // Imprime el resultado
     uart_puts(uart_port_g_lora, sendCmd);
 
     return true;
-    
-    // printf("sending unconfirmed message\n");
     // uart_puts(uart_port_g_lora, "AT+DTRX=0,2,62,412C20362E3231353231302C202D37352E353833333935\n");
 }
