@@ -38,7 +38,7 @@ bool lora_send(uint8_t conf, uint8_t trials, uint8_t length, char *payload){
     }
 
     // printf("sending unconfirmed message %s\n", payload);
-    // printf("%s\n", sendCmd); // Imprime el resultado
+    printf("%s\n", sendCmd); // Imprime el resultado
     uart_puts(uart_port_g_lora, sendCmd);
 
     return true;

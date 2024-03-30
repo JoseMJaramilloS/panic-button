@@ -32,11 +32,8 @@ target_link_libraries(${PROJECT_NAME}
     hardware_irq
     pico_stdio_uart
     hardware_sleep
-
-    pico_runtime
-    hardware_rtc
 )
-target_include_directories(${PROJECT_NAME} PUBLIC inc/)
+target_include_directories(${PROJECT_NAME} PUBLIC inc/) 
 
 # Enable USB support if needed
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
