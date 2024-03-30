@@ -1,13 +1,24 @@
+#include <stdint.h> // Para uint8_t
+#include <string.h> // Para strcat
+#include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
-#include <stdint.h> // Para uint8_t
-#include <string.h> // Para strcat
-#include <stdio.h>
+#include "pico/sleep.h" // pico_sleep: dormant mode
 #include "gps.h"
 #include "lorawan.h"
 #include "events.h"
+
+#include "hardware/clocks.h"
+#include "hardware/rosc.h"
+#include "hardware/structs/scb.h"
+#include "hardware/pll.h"
+#include "hardware/xosc.h"
+#include "hardware/watchdog.h"
+#include "hardware/regs/clocks.h"
+#define RTC_CLOCK_FREQ_HZ       (USB_CLK_KHZ * KHZ / 1024)
+
 
 #define BAUD_RATE 9600
 #define GPS_TX 8 // Se conecta al RX del GPS
@@ -40,7 +51,7 @@ void gpio_callback(uint gpio, uint32_t events) {
             last_button_state = current_button_state;
 
             if (!current_button_state) {  // Botón presionado (considerando pull-up)
-                printf("Botón presionado!\n");
+                // printf("Botón presionado!\n");
                 EV_BUTTON = 1;
             }
         }
@@ -49,6 +60,99 @@ void gpio_callback(uint gpio, uint32_t events) {
         // To be implemented
     }
 }
+
+void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig){
+
+    //Re-enable ring Oscillator control
+    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
+
+    //reset procs back to default
+    scb_hw->scr = scb_orig;
+    clocks_hw->sleep_en0 = clock0_orig;
+    clocks_hw->sleep_en1 = clock1_orig;
+
+    //reset clocks
+    clocks_init();
+    // stdio_init_all();
+    // stdio_uart_init();
+    // stdio_usb_init();
+
+    return;
+}
+
+void my_clocks_init(void) {
+    // Start tick in watchdog, the argument is in 'cycles per microsecond' i.e. MHz
+    watchdog_start_tick(XOSC_KHZ / KHZ);
+
+    // Disable resus that may be enabled from previous software
+    clocks_hw->resus.ctrl = 0;
+
+    // Enable the xosc
+    xosc_init();
+
+    //Re-enable ring Oscillator control
+    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
+
+    // Before we touch PLLs, switch sys and ref cleanly away from their aux sources.
+    // hw_clear_bits(&clocks_hw->clk[clk_sys].ctrl, CLOCKS_CLK_SYS_CTRL_SRC_BITS);
+    // while (clocks_hw->clk[clk_sys].selected != 0x1)
+    //     tight_loop_contents();
+    // hw_clear_bits(&clocks_hw->clk[clk_ref].ctrl, CLOCKS_CLK_REF_CTRL_SRC_BITS);
+    // while (clocks_hw->clk[clk_ref].selected != 0x1)
+    //     tight_loop_contents();
+
+    /// \tag::pll_init[]
+    pll_init(pll_sys, PLL_COMMON_REFDIV, PLL_SYS_VCO_FREQ_KHZ * KHZ, PLL_SYS_POSTDIV1, PLL_SYS_POSTDIV2);
+    pll_init(pll_usb, PLL_COMMON_REFDIV, PLL_USB_VCO_FREQ_KHZ * KHZ, PLL_USB_POSTDIV1, PLL_USB_POSTDIV2);
+    /// \end::pll_init[]
+
+    // Configure clocks
+    // CLK_REF = XOSC (usually) 12MHz / 1 = 12MHz
+    clock_configure(clk_ref,
+                    CLOCKS_CLK_REF_CTRL_SRC_VALUE_XOSC_CLKSRC,
+                    0, // No aux mux
+                    XOSC_KHZ * KHZ,
+                    XOSC_KHZ * KHZ);
+
+    /// \tag::configure_clk_sys[]
+    // CLK SYS = PLL SYS (usually) 125MHz / 1 = 125MHz
+    clock_configure(clk_sys,
+                    CLOCKS_CLK_SYS_CTRL_SRC_VALUE_CLKSRC_CLK_SYS_AUX,
+                    CLOCKS_CLK_SYS_CTRL_AUXSRC_VALUE_CLKSRC_PLL_SYS,
+                    SYS_CLK_KHZ * KHZ,
+                    SYS_CLK_KHZ * KHZ);
+    /// \end::configure_clk_sys[]
+
+    // CLK USB = PLL USB 48MHz / 1 = 48MHz
+    clock_configure(clk_usb,
+                    0, // No GLMUX
+                    CLOCKS_CLK_USB_CTRL_AUXSRC_VALUE_CLKSRC_PLL_USB,
+                    USB_CLK_KHZ * KHZ,
+                    USB_CLK_KHZ * KHZ);
+
+    // CLK ADC = PLL USB 48MHZ / 1 = 48MHz
+    clock_configure(clk_adc,
+                    0, // No GLMUX
+                    CLOCKS_CLK_ADC_CTRL_AUXSRC_VALUE_CLKSRC_PLL_USB,
+                    USB_CLK_KHZ * KHZ,
+                    USB_CLK_KHZ * KHZ);
+
+    // CLK RTC = PLL USB 48MHz / 1024 = 46875Hz
+    clock_configure(clk_rtc,
+                    0, // No GLMUX
+                    CLOCKS_CLK_RTC_CTRL_AUXSRC_VALUE_CLKSRC_PLL_USB,
+                    USB_CLK_KHZ * KHZ,
+                    RTC_CLOCK_FREQ_HZ);
+
+    // CLK PERI = clk_sys. Used as reference clock for Peripherals. No dividers so just select and enable
+    // Normally choose clk_sys or clk_usb
+    clock_configure(clk_peri,
+                    0,
+                    CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS,
+                    SYS_CLK_KHZ * KHZ,
+                    SYS_CLK_KHZ * KHZ);
+}
+
 
 int main() {
     stdio_init_all();
@@ -66,8 +170,26 @@ int main() {
 
     // GPS Initialization
     gps_init(GPS_TX, GPS_RX, GPS_UART_ID, BAUD_RATE);
-    sleep_ms(3000);
 
+    // Dormant state
+    //save values for later
+    // uint scb_orig = scb_hw->scr;
+    // uint clock0_orig = clocks_hw->sleep_en0;
+    // uint clock1_orig = clocks_hw->sleep_en1;
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+    sleep_run_from_xosc(); // UART will be reconfigured by sleep_run_from_xosc
+
+    // sleep_goto_dormant_until_edge_high(BUTTON_GPIO); // Solo para flancos de subida
+    gpio_put(PICO_DEFAULT_LED_PIN,1);
+    sleep_goto_dormant_until_pin(BUTTON_GPIO, true, false);
+    my_clocks_init();
+    stdio_init_all();
+    gpio_put(PICO_DEFAULT_LED_PIN,0);
+    
+    // clocks_init();
+    // recover_from_sleep(scb_orig, clock0_orig, clock1_orig);
+    
     while (1) {
         // printf("Command input: ");
         // fgets(cmd, sizeof(cmd), stdin);  // Read command from stdin (enable LF)
@@ -80,21 +202,21 @@ int main() {
         //     printf("%c", received_char);
         // }
         //-------------------------------------------
-        // if (read_gps_coor(&latitude, &longitude)){
-        //     printf("%f,%f\n",latitude, longitude);
-        // }
-        // tight_loop_contents();
+
         if (!PENDING_EVENTS){
-            continue; // wfi
+            // gpio_put(PICO_DEFAULT_LED_PIN,1);
+            // sleep_goto_dormant_until_pin(BUTTON_GPIO, true, false);
+            // gpio_put(PICO_DEFAULT_LED_PIN,0);
         }
 
         if (EV_BUTTON){
+            gpio_put(PICO_DEFAULT_LED_PIN,1);
             EV_BUTTON = 0;
             button_pressed = 1;
             if (read_gps_coor(&latitude, &longitude)){
                 // latitude = 6.2152100;
                 // longitude = -75.5833950;
-                printf("%f,%f\n", latitude, longitude);
+                // printf("%f,%f\n", latitude, longitude);
 
                 char message[64];
                 int len = snprintf(message, sizeof(message),"%d, %f, %f", button_pressed, latitude, longitude);
@@ -106,8 +228,9 @@ int main() {
                 }
                 hex_payload[i*2] = '\0'; // Agrega el carácter nulo al final de la cadena
 
-                lora_send(0, 2, len, hex_payload); // se puede mejorar (?)
+                lora_send(0, 2, len, hex_payload);
             }
+            gpio_put(PICO_DEFAULT_LED_PIN,0);
         }
 
         if (EV_OPEN){

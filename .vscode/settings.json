@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "pico.h": "c",
+        "sleep.h": "c"
+    }
+}

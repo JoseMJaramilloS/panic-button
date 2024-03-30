@@ -33,12 +33,12 @@ bool lora_send(uint8_t conf, uint8_t trials, uint8_t length, char *payload){
     // Construye el comando 
     int written = snprintf(sendCmd, sizeof(sendCmd), "AT+DTRX=%u,%u,%u,%s\n", conf, trials, length, payload);
     if (written < 0 || written >= sizeof(sendCmd)) {
-        printf("Error: sending buffer exceeded or error formating .\n");
+        // printf("Error: sending buffer exceeded or error formating .\n");
         return false; 
     }
 
-    printf("sending unconfirmed message %s\n", payload);
-    printf("%s\n", sendCmd); // Imprime el resultado
+    // printf("sending unconfirmed message %s\n", payload);
+    // printf("%s\n", sendCmd); // Imprime el resultado
     uart_puts(uart_port_g_lora, sendCmd);
 
     return true;
