@@ -39,8 +39,8 @@ target_link_libraries(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PUBLIC inc/)
 
 # Enable USB support if needed
-pico_enable_stdio_usb(${PROJECT_NAME} 1)
-pico_enable_stdio_uart(${PROJECT_NAME} 0)
+pico_enable_stdio_usb(${PROJECT_NAME} 0)
+pico_enable_stdio_uart(${PROJECT_NAME} 1)
 
 # Create the UF2 file needed to load on the Raspberry Pi Pico
 pico_add_extra_outputs(${PROJECT_NAME})

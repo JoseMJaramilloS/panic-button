@@ -1,6 +1,25 @@
 {
-    "files.associations": {
-        "pico.h": "c",
-        "sleep.h": "c"
-    }
-}
+    // "cmake.generator": "MinGW Makefiles",
+    // "cmake.configureEnvironment": {
+    //   "PICO_SDK_PATH": "C:\\Pico\\pico-sdk"
+    // },
+    // "files.associations": {
+    //   "stdlib.h": "c"
+    // },
+    "cmake.statusbar.advanced": {
+      "debug": {
+          "visibility": "hidden"
+      },
+      "launch": {
+          "visibility": "hidden"
+      },
+      "build": {
+          "visibility": "default"
+      },
+      "buildTarget": {
+          "visibility": "default"
+      }
+  },
+  "cmake.buildBeforeRun": true,
+//   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  }
