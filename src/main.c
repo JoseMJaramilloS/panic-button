@@ -84,6 +84,22 @@ void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig){
     return;
 }
 
+// FUNCION IMPLEMENTADA PARA CONFIGURAR CLK_SYS
+void clock_sys_configure(){
+    hw_clear_bits(&clocks_hw->clk[clk_sys].ctrl, 0x00E0UL);
+    tight_loop_contents();
+    tight_loop_contents();
+    tight_loop_contents();
+    tight_loop_contents();
+    hw_set_bits(&clocks_hw->clk[clk_sys].ctrl, 1);
+    while (!(clocks_hw->clk[clk_sys].selected))
+            tight_loop_contents();
+    // uint32_t configured_freq[CLK_COUNT];
+    // // configured_freq[clk_index] = (uint32_t)(((uint64_t) src_freq << 8) / div)
+    // configured_freq[clk_sys] = (uint32_t)(((uint64_t) SYS_CLK_KHZ*KHZ << 8) / 1);
+    clock_set_reported_hz(clk_sys, SYS_CLK_KHZ*KHZ);
+}
+
 void recover_fromDormant(uint scb_orig, uint clock0_orig, uint clock1_orig){
     
     rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
@@ -108,9 +124,11 @@ void recover_fromDormant(uint scb_orig, uint clock0_orig, uint clock1_orig){
 
     // clock_configure(clk_sys, // FALLA
     //                 CLOCKS_CLK_SYS_CTRL_SRC_VALUE_CLKSRC_CLK_SYS_AUX,
-    //                 CLOCKS_CLK_SYS_CTRL_AUXSRC_VALUE_CLKSRC_PLL_SYS,
+    //                 0, // CLOCKS_CLK_SYS_CTRL_AUXSRC_VALUE_CLKSRC_PLL_SYS,
     //                 SYS_CLK_KHZ * KHZ,
     //                 SYS_CLK_KHZ * KHZ);
+    clock_sys_configure();
+    
 
     // CLK USB = PLL USB 48MHz / 1 = 48MHz
     clock_configure(clk_usb,
@@ -132,11 +150,11 @@ void recover_fromDormant(uint scb_orig, uint clock0_orig, uint clock1_orig){
     // clocks_hw->sleep_en1 = clock1_orig;
     
     // clocks_init();
-    // stdio_init_all();
-    // stdio_uart_init();
+    stdio_init_all();
+    stdio_uart_init();
 
     // Reconfigure uart with new clocks
-    setup_default_uart();
+    // setup_default_uart();
 
     return;
 }
