@@ -3,6 +3,7 @@
 uart_inst_t *uart_port_g_lora;
 
 // LoRa RX interrupt handler (DESACTIVADA POR EL MOMENTO)
+// Se usaría para capturar datos entrantes al modulo mediante interrupcion.
 void on_uart_rx() {
     while (uart_is_readable(uart_port_g_lora)) {
         char received_char = uart_getc(uart_port_g_lora);
@@ -25,9 +26,10 @@ void lorawan_init(uint8_t tx_pin, uint8_t rx_pin, uart_inst_t *uart_port, uint b
     irq_set_enabled(UART0_IRQ, true);
 
     // Now enable the UART to send interrupts - RX only
-    uart_set_irq_enables(uart_port_g_lora, false, false); //-----------------------
+    uart_set_irq_enables(uart_port_g_lora, false, false); // Interrupcion desactivada
 }
 
+// Construye el comando AT para enviar un payload a través del modulo lorawan
 bool lora_send(uint8_t conf, uint8_t trials, uint8_t length, char *payload){
     char sendCmd[64];
     // Construye el comando 
@@ -39,8 +41,8 @@ bool lora_send(uint8_t conf, uint8_t trials, uint8_t length, char *payload){
 
     // printf("sending unconfirmed message %s\n", payload);
     printf("%s\n", sendCmd); // Imprime el resultado
-    uart_puts(uart_port_g_lora, sendCmd);
+    uart_puts(uart_port_g_lora, sendCmd); // Pone el comando construido en el UART
 
     return true;
-    // uart_puts(uart_port_g_lora, "AT+DTRX=0,2,62,412C20362E3231353231302C202D37352E353833333935\n");
+    // uart_puts(uart_port_g_lora, "AT+DTRX=0,2,62,412C20362E3231353231302C202D37352E353833333935\n"); // only testing
 }

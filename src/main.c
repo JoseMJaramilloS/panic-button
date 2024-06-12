@@ -83,6 +83,7 @@ int main() {
             // gpio_put(PICO_DEFAULT_LED_PIN,1);
             EV_BUTTON = 0;
             button_pressed = 1;
+            // Para no usar GPS, comentar la siguiente linea, y descomentar los valores arbitrarios de latitud y longitud
             if (read_gps_coor(&latitude, &longitude)){
                 // latitude = 6.2152100;
                 // longitude = -75.5833950;
