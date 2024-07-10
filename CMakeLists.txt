@@ -22,6 +22,7 @@ add_executable(${PROJECT_NAME}
     src/main.c
     src/gps.c
     src/lorawan.c
+    src/lowpower.c
 )
 
 # Link the necessary libraries to the executable
@@ -32,12 +33,13 @@ target_link_libraries(${PROJECT_NAME}
     hardware_irq
     pico_stdio_uart
     hardware_sleep
+    # pico_stdio_usb
 )
 target_include_directories(${PROJECT_NAME} PUBLIC inc/) 
 
 # Enable USB support if needed
-pico_enable_stdio_usb(${PROJECT_NAME} 1)
-pico_enable_stdio_uart(${PROJECT_NAME} 0)
+pico_enable_stdio_usb(${PROJECT_NAME} 0)
+pico_enable_stdio_uart(${PROJECT_NAME} 1) # due debuging mode
 
 # Create the UF2 file needed to load on the Raspberry Pi Pico
 pico_add_extra_outputs(${PROJECT_NAME})

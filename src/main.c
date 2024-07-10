@@ -5,10 +5,12 @@
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
-#include "pico/sleep.h" // pico_sleep: dormant mode
+#include "pico/sleep.h" // pico_sleep: dormant/sleep mode
 #include "gps.h"
 #include "lorawan.h"
 #include "events.h"
+#include "lowpower.h"
+
 
 #define WAITFORINT() __asm volatile ("wfi")
 #define BUTTON_GPIO 10  // Define interrupt button
@@ -21,6 +23,7 @@ char cmd[16]; // Send Commands monitor serial
 
 double latitude, longitude;
 bool button_pressed = false;
+bool asleep = false;
 
 volatile _events_str _events; // Events structure
 
@@ -54,13 +57,25 @@ int main() {
     gpio_pull_up(BUTTON_GPIO);
 
     // GPIO IRQ callback
-    gpio_set_irq_enabled_with_callback(BUTTON_GPIO, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+    gpio_set_irq_enabled_with_callback(BUTTON_GPIO, GPIO_IRQ_EDGE_FALL, true, &gpio_callback); 
 
     // LoRaWAN module initialization
     lorawan_init(LORA_TX, LORA_RX, LORA_UART_ID, LORA_BAUD_RATE);
 
     // GPS Initialization
-    gps_init(GPS_TX, GPS_RX, GPS_UART_ID, GPS_BAUD_RATE);
+    // gps_init(GPS_TX, GPS_RX, GPS_UART_ID, GPS_BAUD_RATE);
+
+    // Built-in LED initialization (debuging)
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+
+    // measure_freqs();
+    // sleep_run_from_rosc(); // UART will be reconfigured by sleep_run_from_xosc
+    // measure_freqs();
+
+    // Esperar (PARA DEBUG)
+    // sleep_ms(5000);
+
 
     while (1) {
         // printf("Command input: ");
@@ -76,17 +91,36 @@ int main() {
         //-------------------------------------------
 
         if (!PENDING_EVENTS){
-            WAITFORINT();
+            // WAITFORINT();
+            // if (!asleep){
+                asleep = true;
+                gpio_put(PICO_DEFAULT_LED_PIN,1);
+                measure_freqs();
+                sleep_run_from_xosc(); // UART will be reconfigured by sleep_run_from_xosc
+                measure_freqs();
+                sleep_goto_dormant_until_pin(BUTTON_GPIO, true, false);
+                // gpio_put(PICO_DEFAULT_LED_PIN,0);
+
+                // recover_from_sleep(scb_orig, clock0_orig, clock1_orig);
+                // recover_fromDormant(scb_orig, clock0_orig, clock1_orig);
+                rosc_enable();
+                clocks_init();
+                stdio_init_all();
+                printf("Debería tomar evento\n");
+                // asleep = false;
+                
+            // }
         }
 
         if (EV_BUTTON){
-            // gpio_put(PICO_DEFAULT_LED_PIN,1);
+            gpio_put(PICO_DEFAULT_LED_PIN,0);
             EV_BUTTON = 0;
             button_pressed = 1;
             // Para no usar GPS, comentar la siguiente linea, y descomentar los valores arbitrarios de latitud y longitud
-            if (read_gps_coor(&latitude, &longitude)){
-                // latitude = 6.2152100;
-                // longitude = -75.5833950;
+            // if (read_gps_coor(&latitude, &longitude)){
+            if(1){
+                latitude = 6.2152100;
+                longitude = -75.5833950;
                 printf("%f,%f\n", latitude, longitude);
 
                 char message[64];
@@ -102,6 +136,7 @@ int main() {
                 lora_send(0, 2, len, hex_payload);
             }
             // gpio_put(PICO_DEFAULT_LED_PIN,0);
+            // asleep = false;
         }
 
         if (EV_OPEN){
