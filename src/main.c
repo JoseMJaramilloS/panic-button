@@ -65,7 +65,7 @@ void gpio_callback(uint gpio, uint32_t events) {
     }
 }
 
-void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig){
+void recover_from_sleep(uint scb_orig, uint clock0_orig, uint clock1_orig){ // UNUSED
 
     //Re-enable ring Oscillator control
     rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
@@ -94,8 +94,6 @@ void clock_sys_configure(){
     hw_set_bits(&clocks_hw->clk[clk_sys].ctrl, 1);
     while (!(clocks_hw->clk[clk_sys].selected))
             tight_loop_contents();
-    // uint32_t configured_freq[CLK_COUNT];
-    // // configured_freq[clk_index] = (uint32_t)(((uint64_t) src_freq << 8) / div)
     // configured_freq[clk_sys] = (uint32_t)(((uint64_t) SYS_CLK_KHZ*KHZ << 8) / 1);
     clock_set_reported_hz(clk_sys, SYS_CLK_KHZ*KHZ);
 }
@@ -122,12 +120,12 @@ void recover_fromDormant(uint scb_orig, uint clock0_orig, uint clock1_orig){
                     XOSC_KHZ * KHZ,
                     XOSC_KHZ * KHZ);
 
-    // clock_configure(clk_sys, // FALLA
-    //                 CLOCKS_CLK_SYS_CTRL_SRC_VALUE_CLKSRC_CLK_SYS_AUX,
-    //                 0, // CLOCKS_CLK_SYS_CTRL_AUXSRC_VALUE_CLKSRC_PLL_SYS,
-    //                 SYS_CLK_KHZ * KHZ,
-    //                 SYS_CLK_KHZ * KHZ);
-    clock_sys_configure();
+    clock_configure(clk_sys, // FALLA
+                    CLOCKS_CLK_SYS_CTRL_SRC_VALUE_CLKSRC_CLK_SYS_AUX,
+                    0, // CLOCKS_CLK_SYS_CTRL_AUXSRC_VALUE_CLKSRC_PLL_SYS,
+                    SYS_CLK_KHZ * KHZ,
+                    SYS_CLK_KHZ * KHZ);
+    // clock_sys_configure(); // LLamada a funcion implementada
     
 
     // CLK USB = PLL USB 48MHz / 1 = 48MHz
@@ -144,7 +142,7 @@ void recover_fromDormant(uint scb_orig, uint clock0_orig, uint clock1_orig){
                     USB_CLK_KHZ * KHZ,
                     USB_CLK_KHZ * KHZ);
 
-    // //reset procs back to default
+    // reset procs back to default
     // scb_hw->scr = scb_orig;
     // clocks_hw->sleep_en0 = clock0_orig;
     // clocks_hw->sleep_en1 = clock1_orig;
@@ -208,6 +206,7 @@ int main() {
 
     measure_freqs();
     sleep_run_from_xosc(); // UART will be reconfigured by sleep_run_from_xosc
+    measure_freqs();
 
     // sleep_goto_dormant_until_edge_high(BUTTON_GPIO); // Solo para flancos de subida
     // gpio_put(PICO_DEFAULT_LED_PIN,1);
