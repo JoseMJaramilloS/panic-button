@@ -10,7 +10,7 @@
 #define GPS_BAUD_RATE 9600
 #define DATA_LEN 8
 #define STOP_BITS 1
-#define GPS_TX 8 // Se conecta al RX del GPS
+#define GPS_TX 8 // Se conecta al RX del GPS 
 #define GPS_RX 9 // Se conecta al TX del GPS
 #define GPS_UART_ID uart1
 #define PARITY UART_PARITY_NONE

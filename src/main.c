@@ -9,15 +9,11 @@
 #include "gps.h"
 #include "lorawan.h"
 #include "events.h"
-
-#define WAITFORINT() __asm volatile ("wfi")
-#define BUTTON_GPIO 10  // Define interrupt button
-#define OPEN_GPIO 14 // Define open case interrupt button
-#define DEBOUNCE_STABLE_MS 50
+#include "main.h"
 
 volatile uint32_t last_change_time = 0;
 bool last_button_state = false;
-char cmd[16]; // Send Commands monitor serial
+uint32_t debounce_time = 0;
 
 double latitude, longitude;
 bool button_pressed = false;
@@ -35,7 +31,7 @@ void gpio_callback(uint gpio, uint32_t events) {
             last_button_state = current_button_state;
 
             if (!current_button_state) {  // Botón presionado (considerando pull-up)
-                // printf("Botón presionado!\n");
+                printf("Boton presionado!\n");
                 EV_BUTTON = 1;
             }
         }
@@ -44,6 +40,23 @@ void gpio_callback(uint gpio, uint32_t events) {
         // To be implemented
     }
 }
+
+// void gpio_int_handler(uint gpio, uint32_t events)
+// {
+//     if (gpio == BUTTON_PIN && (events & GPIO_IRQ_EDGE_RISE))
+//     {
+//         if ((time_us_32() - debounce_time) > 500000)
+//         {
+//             EV_BUTTON = 1;
+//             gpio_put(PICO_DEFAULT_LED_PIN, 1);
+//             debounce_time = time_us_32();
+//         }
+//     }
+
+//     if(gpio == OPEN_GPIO){
+//         // To be implemented
+//     }
+// }
 
 int main() {
     stdio_init_all();
@@ -55,25 +68,23 @@ int main() {
 
     // GPIO IRQ callback
     gpio_set_irq_enabled_with_callback(BUTTON_GPIO, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+    // gpio_set_irq_enabled_with_callback(BUTTON_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_int_handler);
 
     // LoRaWAN module initialization
-    lorawan_init(LORA_TX, LORA_RX, LORA_UART_ID, LORA_BAUD_RATE);
+    lorawan_init(CHANNEL, DR);
 
     // GPS Initialization
     gps_init(GPS_TX, GPS_RX, GPS_UART_ID, GPS_BAUD_RATE);
 
-    while (1) {
-        // printf("Command input: ");
-        // fgets(cmd, sizeof(cmd), stdin);  // Read command from stdin (enable LF)
+    // Built-in LED initialization
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 
-        // printf("Sending command\n");
-        // uart_puts(UART_ID_LORA, cmd);
-        //-------------------------------------------
-        // while (uart_is_readable(uart0)) {
-        //     char received_char = uart_getc(uart0);
-        //     printf("%c", received_char);
-        // }
-        //-------------------------------------------
+    while (1) {
+        if (uart_is_readable(LORA_UART_ID)) {
+            char received_char = uart_getc(LORA_UART_ID);
+            printf("%c", received_char);
+        }
 
         if (!PENDING_EVENTS){
             WAITFORINT();
@@ -89,19 +100,15 @@ int main() {
                 // longitude = -75.5833950;
                 printf("%f,%f\n", latitude, longitude);
 
-                char message[64];
-                int len = snprintf(message, sizeof(message),"%d, %f, %f", button_pressed, latitude, longitude);
-
-                int i;
-                char hex_payload[100];
-                for (i = 0; message[i] != '\0'; i++){
-                    sprintf(&hex_payload[i*2], "%02x", message[i]);
-                }
-                hex_payload[i*2] = '\0'; // Agrega el carácter nulo al final de la cadena
-
-                lora_send(0, 2, len, hex_payload);
+                char payload[64];
+                int len = snprintf(payload, sizeof(payload),"%d, %f, %f", button_pressed, latitude, longitude);
+                lora_send(0, 2, len, payload);
+                gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
-            // gpio_put(PICO_DEFAULT_LED_PIN,0);
+
+            else{
+                printf("No GPS data\n");
+            }
         }
 
         if (EV_OPEN){
