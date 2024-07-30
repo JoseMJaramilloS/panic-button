@@ -12,8 +12,7 @@
 #include "main.h"
 
 volatile uint32_t last_change_time = 0;
-bool last_button_state = false;
-uint32_t debounce_time = 0;
+bool last_button_state = 1;
 
 double latitude, longitude;
 bool button_pressed = false;
@@ -21,19 +20,43 @@ bool button_pressed = false;
 volatile _events_str _events; // Events structure
 
 // Button interrupt handler
+// void gpio_callback(uint gpio, uint32_t events) {
+//     printf("pressed\n");
+//     if(gpio == BUTTON_GPIO){
+//         uint32_t current_time = to_ms_since_boot(get_absolute_time());
+//         bool current_button_state = gpio_get(BUTTON_GPIO);
+//         // Comprobar si ha pasado suficiente tiempo desde el último cambio para considerarlo estable
+//         if ((current_time - last_change_time) > DEBOUNCE_STABLE_MS && current_button_state != last_button_state) {
+//             last_change_time = current_time;
+//             last_button_state = current_button_state;
+//             if (!current_button_state) {  // Botón presionado (considerando pull-up)
+//                 printf("Boton presionado!\n");
+//                 EV_BUTTON = 1;
+//             }
+//         }
+//     }
+//     if(gpio == OPEN_GPIO){
+//         // To be implemented
+//     }
+// }
+
 void gpio_callback(uint gpio, uint32_t events) {
     if(gpio == BUTTON_GPIO){
-        uint32_t current_time = to_ms_since_boot(get_absolute_time());
-        bool current_button_state = gpio_get(BUTTON_GPIO);
         // Comprobar si ha pasado suficiente tiempo desde el último cambio para considerarlo estable
-        if ((current_time - last_change_time) > DEBOUNCE_STABLE_MS && current_button_state != last_button_state) {
-            last_change_time = current_time;
-            last_button_state = current_button_state;
+        if ((to_ms_since_boot(get_absolute_time()) - last_change_time) > DEBOUNCE_STABLE_MS) {
+            last_change_time = to_ms_since_boot(get_absolute_time());
 
-            if (!current_button_state) {  // Botón presionado (considerando pull-up)
-                printf("Boton presionado!\n");
-                EV_BUTTON = 1;
-            }
+            // bool current_button_state = gpio_get(BUTTON_GPIO);
+            // if (current_button_state != last_button_state){
+            //     last_button_state = current_button_state;
+            //     if (!current_button_state) {  // Botón presionado (considerando pull-up)
+            //         printf("Boton presionado!\n");
+            //         EV_BUTTON = 1;
+            //     }
+            // }
+
+            printf("Boton presionado!\n");
+            EV_BUTTON = 1;
         }
     }
     if(gpio == OPEN_GPIO){
@@ -41,30 +64,13 @@ void gpio_callback(uint gpio, uint32_t events) {
     }
 }
 
-// void gpio_int_handler(uint gpio, uint32_t events)
-// {
-//     if (gpio == BUTTON_PIN && (events & GPIO_IRQ_EDGE_RISE))
-//     {
-//         if ((time_us_32() - debounce_time) > 500000)
-//         {
-//             EV_BUTTON = 1;
-//             gpio_put(PICO_DEFAULT_LED_PIN, 1);
-//             debounce_time = time_us_32();
-//         }
-//     }
-
-//     if(gpio == OPEN_GPIO){
-//         // To be implemented
-//     }
-// }
-
 int main() {
     stdio_init_all();
 
     // Initialize GPIO for button with pull-up
     gpio_init(BUTTON_GPIO);
     gpio_set_dir(BUTTON_GPIO, GPIO_IN);
-    gpio_pull_up(BUTTON_GPIO);
+    // gpio_pull_up(BUTTON_GPIO);
 
     // GPIO IRQ callback
     gpio_set_irq_enabled_with_callback(BUTTON_GPIO, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
@@ -81,17 +87,17 @@ int main() {
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 
     while (1) {
-        if (uart_is_readable(LORA_UART_ID)) {
-            char received_char = uart_getc(LORA_UART_ID);
-            printf("%c", received_char);
-        }
+        // if (uart_is_readable(LORA_UART_ID)) {
+        //     char received_char = uart_getc(LORA_UART_ID);
+        //     printf("%c", received_char);
+        // }
 
         if (!PENDING_EVENTS){
             WAITFORINT();
         }
 
         if (EV_BUTTON){
-            // gpio_put(PICO_DEFAULT_LED_PIN,1);
+            gpio_put(PICO_DEFAULT_LED_PIN,1);
             EV_BUTTON = 0;
             button_pressed = 1;
             // Para no usar GPS, comentar la siguiente linea, y descomentar los valores arbitrarios de latitud y longitud
@@ -101,7 +107,7 @@ int main() {
                 printf("%f,%f\n", latitude, longitude);
 
                 char payload[64];
-                int len = snprintf(payload, sizeof(payload),"%d, %f, %f", button_pressed, latitude, longitude);
+                int len = snprintf(payload, sizeof(payload),"%d, %f, %f, %s", button_pressed, latitude, longitude, DEVICE_ID);
                 lora_send(0, 2, len, payload);
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
@@ -109,6 +115,7 @@ int main() {
             else{
                 printf("No GPS data\n");
             }
+            gpio_put(PICO_DEFAULT_LED_PIN,0);
         }
 
         if (EV_OPEN){
