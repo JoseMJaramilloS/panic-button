@@ -14,6 +14,7 @@
 volatile uint32_t last_change_time = 0;
 bool last_button_state = 1;
 
+double last_latitude, last_longitude = 0;
 double latitude, longitude;
 bool button_pressed = false;
 
@@ -105,6 +106,16 @@ int main() {
                 // latitude = 6.2152100;
                 // longitude = -75.5833950;
                 printf("%f,%f\n", latitude, longitude);
+
+                // Si las coordenadas recibidas son correctas, se usan. Si no, se usan las ultimas que fueron correctas
+                if (is_Colombia(&latitude, &longitude)){
+                    last_latitude = latitude;
+                    last_longitude = longitude;
+                }
+                else{
+                    latitude = last_latitude;
+                    longitude = last_longitude;
+                }
 
                 char payload[64];
                 int len = snprintf(payload, sizeof(payload),"%d, %f, %f, %s", button_pressed, latitude, longitude, DEVICE_ID);

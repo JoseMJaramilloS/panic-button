@@ -99,3 +99,13 @@ bool read_gps_coor(double *latitude, double *longitude){
     return false;
 }
 
+/**
+* @brief Funcion que determina si las coordenadas estan en territorio colombiano
+*/
+bool is_Colombia(double *lat, double *lon){
+    if((*lat > -4.22) && (*lat<12.45) && (*lon>-79.0)&& (*lon<-66.85)){
+        return true;
+    }else{
+        return false;
+    }
+}

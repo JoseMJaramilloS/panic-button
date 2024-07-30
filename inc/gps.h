@@ -19,5 +19,5 @@
 void gps_init(uint8_t tx_pin, uint8_t  rx_pin, uart_inst_t *uart_port, uint baud_rate);
 static bool read_raw_line(uint8_t gps_data[MAX_GPS_DATA_SIZE]);
 bool read_gps_coor(double *latitude, double *longitude);
-
+bool is_Colombia(double * lat, double * lon);
 #endif // GPSLIB_H
