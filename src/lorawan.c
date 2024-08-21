@@ -1,5 +1,12 @@
 #include "lorawan.h"
 
+void on_uart_rx() {
+    while (uart_is_readable(LORA_UART_ID)) {
+        char ch = uart_getc(LORA_UART_ID);
+        printf("%s", ch);
+    }
+}
+
 /**
  * @brief Initialize the LoRaWAN module.
  *
@@ -16,6 +23,12 @@ void lorawan_init(uint8_t che, uint8_t dr)
     gpio_set_function(LORA_RX, GPIO_FUNC_UART);
     uart_set_hw_flow(LORA_UART_ID, false, false);
     uart_set_format(LORA_UART_ID, DATA_BITS, STOP_BITS, PARITY);
+    uart_set_fifo_enabled(LORA_UART_ID, false);
+
+    irq_set_exclusive_handler(LORA_UART_ID, on_uart_rx);
+    irq_set_enabled(LORA_UART_ID, false);
+    uart_set_irq_enables(LORA_UART_ID, false, false);
+
     uart_puts(LORA_UART_ID, "AT+NJM=0\n");
     sleep_ms(500);
     snprintf(sendCmd, sizeof(sendCmd), "AT+CHE=%u\n", che);

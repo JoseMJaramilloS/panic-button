@@ -65,6 +65,51 @@ void gpio_callback(uint gpio, uint32_t events) {
     }
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------
+#define BUFFER_SIZE 256
+char buffer[BUFFER_SIZE];
+int buffer_index = 0;
+
+void read_uart(uart_inst_t *uart_port) {
+    // while (uart_is_readable(uart_port)) {
+    //     char received_char = uart_getc(uart_port);
+    //     if (buffer_index < BUFFER_SIZE - 1) {
+    //         buffer[buffer_index++] = received_char;
+    //     }
+    // }
+    // buffer[buffer_index] = '\0';  // Añadir el terminador nulo
+    // printf("%s", buffer);  // Imprimir todo el buffer de una vez
+    // buffer_index = 0;  // Reiniciar el índice para la próxima recepción
+
+    size_t len = 100; // Número de bytes que deseas leer
+    uart_read_blocking(LORA_UART_ID, buffer, len);
+    buffer[len] = '\0';
+    printf("Received data: %s\n", buffer);
+}
+
+bool read_uart_line(uart_inst_t *uart_port){
+    static uint8_t j = 0; // si es static, es persistente
+    
+    while (uart_is_readable(uart_port)) {
+        char c = uart_getc(uart_port);
+        // printf("%c", c);
+        // putchar(c); // Envía el carácter al USB
+        buffer[j++]= c;
+        if (c == '\n') {
+            buffer[j] = '\0';  // Agrega un terminador nulo al final de la cadena
+            // printf("--%s", gps_data);
+            j = 0;
+            return true; // Trama completa recibida
+        }
+        if (j >= MAX_GPS_DATA_SIZE - 1) {
+            j = 0; // Reinicia el índice si se alcanza el límite del tamaño del búfer
+        }
+    }    
+    return false; // Trama no completa
+}
+
+//---------------------------------------------------------------------------------------------------------------------------------
+
 int main() {
     stdio_init_all();
 
@@ -92,6 +137,10 @@ int main() {
         //     char received_char = uart_getc(LORA_UART_ID);
         //     printf("%c", received_char);
         // }
+        
+        // read_uart(LORA_UART_ID);
+        
+        // if(read_uart_line(LORA_UART_ID)) printf("%s", buffer);
 
         if (!PENDING_EVENTS){
             WAITFORINT();
@@ -120,6 +169,16 @@ int main() {
                 char payload[64];
                 int len = snprintf(payload, sizeof(payload),"%d, %f, %f, %s", button_pressed, latitude, longitude, DEVICE_ID);
                 lora_send(0, 2, len, payload);
+
+                // if(uart_is_readable(LORA_UART_ID)){
+                //     while (uart_is_readable(LORA_UART_ID)) {
+                //         char received_char = uart_getc(LORA_UART_ID);
+                //         printf("%c", received_char);
+                //     }
+                // } 
+
+                // read_uart(LORA_UART_ID);
+
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
 
