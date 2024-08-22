@@ -22,6 +22,7 @@ add_executable(${PROJECT_NAME}
     src/main.c
     src/gps.c
     src/lorawan.c
+    src/debug.c
 )
 
 # Link the necessary libraries to the executable

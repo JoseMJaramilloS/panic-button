@@ -28,7 +28,7 @@ bool read_raw_line(uint8_t gps_data[MAX_GPS_DATA_SIZE]){
     
     while (uart_is_readable(uart_port_g)) {
         char c = uart_getc(uart_port_g);
-        // printf("%c", c);
+        // safe_printf("%c", c);
         // putchar(c); // Envía el carácter al USB
         gps_data[i++]= c;
         if (c == '\n') {

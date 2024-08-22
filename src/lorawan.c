@@ -1,12 +1,5 @@
 #include "lorawan.h"
 
-void on_uart_rx() {
-    while (uart_is_readable(LORA_UART_ID)) {
-        char ch = uart_getc(LORA_UART_ID);
-        printf("%s", ch);
-    }
-}
-
 /**
  * @brief Initialize the LoRaWAN module.
  *
@@ -25,10 +18,6 @@ void lorawan_init(uint8_t che, uint8_t dr)
     uart_set_format(LORA_UART_ID, DATA_BITS, STOP_BITS, PARITY);
     uart_set_fifo_enabled(LORA_UART_ID, false);
 
-    irq_set_exclusive_handler(LORA_UART_ID, on_uart_rx);
-    irq_set_enabled(LORA_UART_ID, false);
-    uart_set_irq_enables(LORA_UART_ID, false, false);
-
     uart_puts(LORA_UART_ID, "AT+NJM=0\n");
     sleep_ms(500);
     snprintf(sendCmd, sizeof(sendCmd), "AT+CHE=%u\n", che);
@@ -37,12 +26,13 @@ void lorawan_init(uint8_t che, uint8_t dr)
     sleep_ms(500);
     uart_puts(LORA_UART_ID, "ATZ\n");
     sleep_ms(2000);
+	uart_puts(LORA_UART_ID, "AT+ADR=0\n");
+    sleep_ms(500);
     snprintf(sendCmd, sizeof(sendCmd), "AT+DR=%u\n", dr);
     //printf(sendCmd);
     uart_puts(LORA_UART_ID, sendCmd);
     sleep_ms(500);
-    uart_puts(LORA_UART_ID, "AT+ADR=0\n");
-    sleep_ms(500);
+
     uart_puts(LORA_UART_ID, "AT+SEND=0,2,5,CFGOK\n");
     sleep_ms(4000);
     uart_puts(LORA_UART_ID, "AT+ADR=1\n");
@@ -71,11 +61,11 @@ bool lora_send(uint8_t conf, uint8_t fPort, uint8_t length, char* payload)
 
     int written = snprintf(sendCmd, sizeof(sendCmd), "AT+SENDB=%u,%u,%u,%s\n", conf, fPort, length, hex_payload);
     if (written < 0 || written >= sizeof(sendCmd)) {
-        printf("Error: sending buffer exceeded or error formating.\n");
+        safe_printf("Error: sending buffer exceeded or error formating.\n");
         return false; 
     }
-    printf("message: %s\n", payload);
-    printf("command: %s\n", sendCmd);
+    safe_printf("message: %s\n", payload);
+    safe_printf("command: %s\n", sendCmd);
     uart_puts(LORA_UART_ID, sendCmd);
     return true;
     //AT+SENDB=0,2,21,302c362e3231353231302c2d37352e353833333935
