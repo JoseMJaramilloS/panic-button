@@ -19,8 +19,6 @@
 #define CHANNEL 2
 #define DR 5
 
-
-
 void lorawan_init(uint8_t che, uint8_t dr);
 bool lora_send(uint8_t conf, uint8_t fPort, uint8_t length, char *payload);
 #endif

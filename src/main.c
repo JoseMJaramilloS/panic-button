@@ -49,7 +49,7 @@ void gpio_callback(uint gpio, uint32_t events) {
 #define BUFFER_SIZE 256
 char rx_buffer[BUFFER_SIZE];
 volatile int rx_index = 0;
-volatile bool uart_printable = 0;
+volatile bool rxdata_available = 0;
 
 // Handler de la interrupción UART
 void on_uart_rx() {
@@ -118,14 +118,19 @@ int main() {
     while (1) {
         // tight_loop_contents();
 
+        if(rxdata_available){
+            safe_printf("%s", rx_buffer);
+        }
+
         if(EV_UART_RX){
             EV_UART_RX = 0;
             safe_printf("%s", rx_buffer);
-            char *found = strstr(rx_buffer, "AT+RECVB=?");
-            if (found != NULL) {
+            // char *found = strstr(rx_buffer, "AT+RECVB=?");
+
+            if (strstr(rx_buffer, "AT+RECVB=?") != NULL) {
                 safe_printf("Data received!\n");
                 uart_puts(LORA_UART_ID, "AT+RECVB=?\n");
-                // uart_puts(LORA_UART_ID, "AT+RECV=?\n");
+                rxdata_available = 1;
             }
         }
 
