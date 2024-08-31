@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.13)
 
 # Include the Pico SDK for the RP2040 microcontroller
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
-include($ENV{PICO_SDK_PATH}/external/pico_extras_import.cmake) # Necesary for pico_sleep
+#include($ENV{PICO_SDK_PATH}/external/pico_extras_import.cmake) # Necesary for pico_sleep
 
 # Set name of project (as PROJECT_NAME) and C/C++ standards
 project(panic_button C CXX) 
@@ -23,6 +23,7 @@ add_executable(${PROJECT_NAME}
     src/gps.c
     src/lorawan.c
     src/debug.c
+    src/commands.c
 )
 
 # Link the necessary libraries to the executable
@@ -32,7 +33,7 @@ target_link_libraries(${PROJECT_NAME}
     hardware_uart
     hardware_irq
     pico_stdio_uart
-    hardware_sleep
+    # hardware_sleep
 )
 target_include_directories(${PROJECT_NAME} PUBLIC inc/) 
 

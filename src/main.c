@@ -5,12 +5,13 @@
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
-#include "pico/sleep.h" // pico_sleep: dormant mode
+// #include "pico/sleep.h" // pico_sleep: dormant mode
 #include "gps.h"
 #include "lorawan.h"
 #include "events.h"
 #include "main.h"
 #include "debug.h"
+#include "commands.h"
 
 volatile uint32_t last_change_time = 0;
 bool last_button_state = 1;
@@ -118,20 +119,30 @@ int main() {
     while (1) {
         // tight_loop_contents();
 
-        if(rxdata_available){
-            safe_printf("%s", rx_buffer);
-        }
+
 
         if(EV_UART_RX){
             EV_UART_RX = 0;
             safe_printf("%s", rx_buffer);
             // char *found = strstr(rx_buffer, "AT+RECVB=?");
+            if(rxdata_available){
+                rxdata_available = 0;
+                safe_printf("payload: %s\n", rx_buffer);
+                // Process command here
+
+                // char ascii_string[256];
+                // hex_to_ascii(rx_buffer, ascii_string);
+                // safe_printf("ASCII: %s\n", ascii_string);
+
+                process_command(rx_buffer);
+            }
 
             if (strstr(rx_buffer, "AT+RECVB=?") != NULL) {
                 safe_printf("Data received!\n");
                 uart_puts(LORA_UART_ID, "AT+RECVB=?\n");
                 rxdata_available = 1;
             }
+
         }
 
         if (!PENDING_EVENTS){
