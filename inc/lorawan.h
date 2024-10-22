@@ -2,8 +2,6 @@
 #define _LORAWAN_H_
 
 #include <stdio.h>
-//#include <stdint.h>
-//#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "debug.h"

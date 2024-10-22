@@ -36,8 +36,6 @@ void lorawan_init(uint8_t che, uint8_t dr)
     uart_puts(LORA_UART_ID, "AT+SEND=0,2,5,CFGOK\n");
     sleep_ms(4000);
     uart_puts(LORA_UART_ID, "AT+ADR=1\n");
-    // sleep_ms(500);
-    // uart_puts(LORA_UART_ID, "AT+CFG\n");
 }
 
 /**

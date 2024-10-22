@@ -23,6 +23,7 @@ extern volatile _events_str _events;
 #define EV_BUTTON		_events.flags.flag0
 #define EV_OPEN			_events.flags.flag1
 #define EV_UART_RX		_events.flags.flag2
+#define EV_STATUS		_events.flags.flag3
 
 // void eventsController(void);
 

@@ -24,6 +24,7 @@ add_executable(${PROJECT_NAME}
     src/lorawan.c
     src/debug.c
     src/commands.c
+    src/alarm.c
 )
 
 # Link the necessary libraries to the executable
@@ -33,7 +34,7 @@ target_link_libraries(${PROJECT_NAME}
     hardware_uart
     hardware_irq
     pico_stdio_uart
-    # hardware_sleep
+    hardware_rtc
 )
 target_include_directories(${PROJECT_NAME} PUBLIC inc/) 
 
